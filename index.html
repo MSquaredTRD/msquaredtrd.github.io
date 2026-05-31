@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The $773K Factory: How One Smart Contract Minted Half of Ethereum's Token History in Two Years</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    max-width: 760px;
+    margin: 40px auto;
+    padding: 0 24px;
+    line-height: 1.65;
+    color: #1a1a1a;
+    background: #fafafa;
+  }
+  h1 {
+    font-size: 32px;
+    line-height: 1.25;
+    margin-bottom: 8px;
+    color: #0a0a0a;
+  }
+  h2 {
+    font-size: 22px;
+    margin-top: 48px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #ddd;
+    color: #0a0a0a;
+  }
+  h3 {
+    font-size: 17px;
+    margin-top: 28px;
+    color: #2a2a2a;
+  }
+  .subtitle {
+    font-size: 18px;
+    color: #555;
+    margin-top: 0;
+    margin-bottom: 32px;
+    font-weight: normal;
+  }
+  .meta {
+    font-size: 13px;
+    color: #888;
+    margin-bottom: 32px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #ddd;
+  }
+  .tldr {
+    background: #f4f6f8;
+    border-left: 4px solid #1769aa;
+    padding: 16px 20px;
+    margin: 24px 0 40px;
+    border-radius: 4px;
+  }
+  .tldr h3 {
+    margin-top: 0;
+    font-size: 14px;
+    color: #1769aa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .tldr ul {
+    margin: 8px 0 0;
+    padding-left: 22px;
+  }
+  .tldr li {
+    margin: 6px 0;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  th {
+    background: #f4f6f8;
+    font-weight: 600;
+    color: #333;
+  }
+  td.num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  td.addr {
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    word-break: break-all;
+  }
+  .callout {
+    background: #fff7e6;
+    border-left: 4px solid #f5a623;
+    padding: 14px 18px;
+    margin: 24px 0;
+    border-radius: 4px;
+    font-size: 15px;
+  }
+  code {
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 13px;
+  }
+  .footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid #ddd;
+    font-size: 14px;
+    color: #555;
+  }
+  .footer h3 {
+    color: #333;
+  }
+  .donate {
+    background: #f4f6f8;
+    padding: 16px 20px;
+    border-radius: 6px;
+    margin-top: 16px;
+  }
+  .donate code {
+    font-size: 12px;
+    display: inline-block;
+    margin: 2px 0;
+  }
+  ol li, ul li {
+    margin: 6px 0;
+  }
+  .source {
+    font-size: 12px;
+    color: #888;
+    font-style: italic;
+  }
+</style>
+</head>
+<body>
+
+<h1>The $773K Factory: How One Smart Contract Minted Half of Ethereum's Token History in Two Years</h1>
+<p class="subtitle">An investigation into BSC's largest active scam-adjacent token factory: one contract, 1.1 million children, two years of silence from validators</p>
+
+<p class="meta">
+Independent research · May 2026 · All data verified against public RPC and public explorers
+</p>
+
+<div class="tldr">
+<h3>TL;DR</h3>
+<ul>
+<li>A <b>factory contract</b> <code>0xe2ce6ab8…65c9de0</code> on BNB Chain mass-produces tokens via an <code>EIP-1167</code> minimal proxy pattern</li>
+<li>Over ~2 years of operation the factory has collected approximately <b>$773 000 in BNB fees</b> and spawned an estimated <b>~1.1 million child tokens</b>. For context: Ethereum's entire 10-year history contains <b>~2.18 million</b> token contracts in total</li>
+<li>Most of the output is Chinese-language meme tokens with vanity addresses ending in <code>…7777</code>. The smaller but most dangerous slice is tokens impersonating major stablecoins via Unicode homoglyphs in their names</li>
+<li>The factory's existence and activity have been openly observable on-chain since April 2024. No concrete action has been taken by BSC validators, Binance, or major explorers</li>
+<li>Specific findings related to listing and price-display vulnerabilities have been submitted to CoinMarketCap and Trust Wallet through the Binance Bug Bounty Program on Bugcrowd. This article covers only the publicly observable factory infrastructure</li>
+</ul>
+</div>
+
+<h2>How this was found</h2>
+
+<p>The starting question was narrow: why do some Trust Wallet users see "USDT" balances worth millions of dollars that turn out to be fake? The investigation began with one specific token, <code>USDT.c</code> on Ethereum, which appeared in wallets with a real-looking price of $0.9975 and the name "Tether USD Bridged TC20" — despite containing the Armenian character <code>Ս</code> (U+054D) in place of a Latin <code>U</code> in its contract name.</p>
+
+<p>A parallel case surfaced on BSC: address <code>0xf7cfAd…ce8888</code>, flagged by BscScan itself as "Suspicious_Token26159 — impersonating well-known cryptocurrencies". Tracing its on-chain genealogy — who created it and how — led to factory contract <code>0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0</code>, which turned out to be larger in scale than expected.</p>
+
+<h2>How the factory works</h2>
+
+<p>The contract <code>0xe2ce6ab8…</code> is an <b>EIP-1967 TransparentUpgradeableProxy</b>, approximately 18 KB in size with an upgradeable implementation. It functions as a factory: a user pays a fixed BNB fee and receives a fresh clone of an ERC-20 contract (<b>EIP-1167 minimal proxy</b>) with arbitrary parameters — name, symbol, decimals, totalSupply, owner.</p>
+
+<p>Architecturally, this is a legitimate pattern. Dozens of public DeFi projects use similar factories — Uniswap V2's pair factory, OpenZeppelin Defender, and others. <b>The existence of a factory says nothing about its intent.</b> What makes this one stand out is the scale and character of its children.</p>
+
+<h3>How the children are discovered</h3>
+
+<p>Each child contract creation emits an event with topic hash <code>0x115c78ad…00f562</code>, in which the new token's address is encoded as an indexed parameter. Scanning all logs emitted by the factory via <code>eth_getLogs</code> against public BSC RPC nodes (no paid API required) reconstructs the full set of child addresses.</p>
+
+<p>The scan covered roughly 7.3% of the factory's historical block range and identified 80 940 child contracts. Linear extrapolation across the remaining range yields an <b>estimate of approximately 1 100 000 ± 50 000 tokens</b> total. The figure is approximate — the actual creation density may have varied across periods.</p>
+
+<h2>Scale, in context</h2>
+
+<table>
+<tr><th>Metric</th><th>This factory (1 contract)</th><th>All of BSC</th><th>All of Ethereum</th></tr>
+<tr><td>Token contracts</td><td class="num">~1,100,000 (est.)</td><td class="num">8,868,045</td><td class="num">2,184,924</td></tr>
+<tr><td>Time span</td><td class="num">~2 years</td><td class="num">~5.5 years</td><td class="num">~10 years</td></tr>
+<tr><td>Share of chain</td><td class="num">~12.4% of BSC</td><td class="num">100%</td><td class="num">100%</td></tr>
+</table>
+
+<p class="source">Sources: BscScan Token Tracker (8,868,045 token contracts at time of research), Etherscan Token Tracker (2,184,924 token contracts cumulative), independent factory scan via public BSC RPC.</p>
+
+<div class="callout">
+<b>What this actually means:</b> one smart contract on one chain has, over two years, produced more tokens than half of everything that has appeared on Ethereum across ten years. This isn't about "good or bad" architecture — it's a question of what those tokens actually do.
+</div>
+
+<h2>The financial picture</h2>
+
+<table>
+<tr><th>Parameter</th><th>Value</th></tr>
+<tr><td>Factory address</td><td class="addr">0xe2ce6ab80874fa9fa2aae65d277dd6b8e65c9de0</td></tr>
+<tr><td>Chain</td><td>BNB Smart Chain (chainid=56)</td></tr>
+<tr><td>Contract type</td><td>EIP-1967 TransparentUpgradeableProxy → ~18KB implementation</td></tr>
+<tr><td>Deploy block</td><td class="num">79,488,951 (~April 2024)</td></tr>
+<tr><td>Total transactions</td><td class="num">~5,000,000</td></tr>
+<tr><td>BNB processed (as fees)</td><td class="num">~$773,000</td></tr>
+<tr><td>Creation event topic</td><td class="addr">0x115c78ad17c4763fb97bca94f3e59dc8cb2e59c9d3862f24a694ec401200f562</td></tr>
+</table>
+
+<p>The $773,000 in BNB fees represents the <b>factory's own revenue</b>, not the volume of its products. This is money paid directly to the factory operator by users issuing tokens. At an average issuance fee of roughly $0.70, the factory processed on the order of 1.1 million unique token-creation requests — consistent with the child-contract count.</p>
+
+<h2>What the factory produces</h2>
+
+<p>A typology emerges from analysis of the first 500 child contracts:</p>
+
+<table>
+<tr><th>Category</th><th>Share</th><th>Description</th></tr>
+<tr><td>Chinese meme tokens</td><td class="num">~85%</td><td>CJK characters in name/symbol, vanity addresses ending in <code>…7777</code> (七, lucky number in Chinese culture)</td></tr>
+<tr><td>Mixed / templated scams</td><td class="num">~10%</td><td>English name + Chinese symbol, "Security Scan" airdrop-scam pattern</td></tr>
+<tr><td>Western impersonation</td><td class="num">~3–5%</td><td>BNB, USDT, DLINK, WBTC, etc. — often with Unicode homoglyphs replacing Latin characters</td></tr>
+</table>
+
+<p>This breakdown matters: <b>the factory is not a dedicated scam tool</b>. The majority of its output serves the Chinese meme-coin market, which in most jurisdictions is legal speculative activity. This means a "block the factory" approach would face significant pushback from 85% of its customer base — customers doing nothing illegal.</p>
+
+<p>But <b>the 3–5% Western impersonation slice represents the highest-value fraud vector in the operation</b>: a single successful token mimicking USDT or BTC can extract more value from victims than a thousand meme coins. These tokens are a minority by count but a majority by potential harm.</p>
+
+<h2>Vanity addresses as a signature</h2>
+
+<p>A notable finding: <b>nearly 100% of child token addresses end in <code>…7777</code></b>. This is not coincidence — it's the result of deliberate salt-grinding in CREATE2 to produce a predetermined address suffix.</p>
+
+<p>In Chinese culture the digit 7 carries strong positive associations; quadrupled, it functions as a brand marker. For the factory's target audience it signals "a token from a familiar source." For analysts it functions as a technical signature: any BSC address ending in <code>…7777</code> deployed after April 2024 has a high probability of originating here.</p>
+
+<h2>The question nobody is answering</h2>
+
+<p>After two years of open operation:</p>
+
+<ul>
+<li>BscScan flags individual child tokens as "Suspicious_Token" but applies no marking to the factory itself</li>
+<li>BSC validators do not — and structurally cannot — selectively filter transactions to a specific contract; doing so would contradict the chain's permissionless premise</li>
+<li>Binance the corporation has no formal authority over BSC (the BNB Chain Foundation is a separately incorporated entity)</li>
+<li>CoinMarketCap, CoinGecko, and similar aggregators respond to individual token reports but do not block listings by factory provenance</li>
+</ul>
+
+<p>The result is a paradox: <b>the problem is visible to everyone and the responsibility belongs to no one</b>. This isn't malicious neglect by any single party — it's a structural consequence of how decentralized infrastructure is organized. But "it's the structure" does not undo ongoing user harm.</p>
+
+<div class="callout">
+<b>So who should respond?</b> The question itself needs reframing. Validators technically can't — it contradicts the entire idea of a permissionless chain. Binance has no legal jurisdiction — BSC is independent. CMC reacts case-by-case. That leaves <b>wallets</b> — the final UI point of contact between user and asset, and exactly where a defensive layer capable of distinguishing a vetted token from an arbitrary clone is currently absent.
+</div>
+
+<h2>What has been done</h2>
+
+<p>Specific vulnerabilities in the listing flow and price display — those that go beyond observing the factory and fall under the responsibility of specific companies — have been packaged as a security disclosure and submitted through the <a href="https://bugcrowd.com/engagements/binance">Bugcrowd Binance Bug Bounty Program</a>, which has both CoinMarketCap and Trust Wallet assets in scope.</p>
+
+<p>Details of those reports are not disclosed in this article pending the disclosure window. A separate publication on the specific technical details may follow once fixes are deployed or coordination with the triage team allows.</p>
+
+<p>This article covers only what is publicly observable today and requires no disclosure embargo — the factory itself, its scale, and the character of what it produces.</p>
+
+<h2>What users can do</h2>
+
+<ol>
+<li><b>Never trust an "unexpected balance".</b> If an asset appears in your wallet that you did not buy or receive from a known source, it is almost always part of a scam construct — even if it displays a large dollar value</li>
+<li><b>Verify the contract address.</b> Real USDT on Ethereum is <code>0xdAC17F958D2ee523a2206206994597C13D831ec7</code>. Any other address for a token labeled "USDT" demands inspection</li>
+<li><b>Remember decimals.</b> Real Tether USDT on Ethereum uses <code>decimals=6</code>. If your wallet shows a "USDT" with <code>decimals=18</code> — it is definitively fake</li>
+<li><b>Do not interact with suspicious tokens</b> at all — do not even attempt to sell or transfer. Any approval of a transfer function can open your wallet to a drain contract</li>
+<li><b>Never pay an "unlock fee".</b> This is always part of the scam — no legitimate stablecoin requires a fee to release a balance</li>
+</ol>
+
+<h2>Methodology</h2>
+
+<p>For independent verification:</p>
+
+<ol>
+<li><b>Factory identification:</b> from the suspect token <code>0xf7cfAd…</code> — locate the contract that initiated its deployment via <code>eth_getTransactionReceipt</code> on the creating transaction</li>
+<li><b>Child contract scan:</b> <code>eth_getLogs</code> against public nodes (<code>bsc-dataseed.binance.org</code>, <code>bsc.publicnode.com</code>, and similar). Filter by the creation event topic. 4 000-block chunks. Extract child addresses from indexed parameters</li>
+<li><b>Child validation:</b> for each candidate address, <code>eth_getCode</code> to filter out EOAs. For those that pass, <code>eth_call</code> to standard ERC-20 methods (<code>name()</code>, <code>symbol()</code>, <code>decimals()</code>, <code>totalSupply()</code>)</li>
+<li><b>Typology:</b> Unicode codepoint analysis of name/symbol, comparison against a whitelist of top tokens</li>
+<li><b>Count extrapolation:</b> 7.3% block-range coverage → 80,940 contracts in sample → ~1,100,000 ± 50,000 extrapolated across the full range. The confidence interval is rough — actual density likely varied over time</li>
+</ol>
+
+<p>All findings are reproducible via re-execution against the same public infrastructure.</p>
+
+<h2>Open questions</h2>
+
+<ol>
+<li>Who owns the factory? The <code>owner()</code> address is on-chain — but tying it to a real-world identity requires resources beyond this investigation</li>
+<li>What is the actual share of Western impersonation tokens across all 1.1M? A 500-token sample is a statistical minimum; a precise figure requires full enumeration</li>
+<li>How much money has gone to victims specifically via this factory's tokens? This requires forensics on each individual token and victim outreach</li>
+<li>Do analogous factories exist on other chains (Polygon, Arbitrum, Base)? The method is portable — but this is a separate investigation</li>
+</ol>
+
+<div class="footer">
+<h3>About this research</h3>
+<p>This investigation was conducted independently, without involvement from Binance, the BNB Chain Foundation, CoinMarketCap, Trust Wallet, or any other company mentioned. Only publicly available on-chain data and open-source tooling were used.</p>
+
+<p><b>Disclaimer:</b> this article presents observations of publicly available on-chain data and is not financial or legal advice. Contract addresses are published for verifiability — interacting with them may result in loss of funds. The author assumes no responsibility for readers' decisions.</p>
+
+<p><b>Coordinated disclosure:</b> technical details of third-party vulnerabilities identified during this research have been submitted through official bug bounty channels and are withheld pending coordination with those parties.</p>
+
+<div class="donate">
+<h3 style="margin-top:0">Support further investigations</h3>
+<p>This work is done independently, without sponsors or editorial assignments. If you found it useful, you can support further research:</p>
+<p>
+ETH / USDT / USDC (ERC-20) and BNB / USDT (BEP-20):<br>
+<code>0xF5C3fEFb11C31bC323a7DBA2363c282AE3A0caCA</code>
+</p>
+<p>
+SOL / USDC (Solana):<br>
+<code>eQPcL6P919pLQMbzjMgm39h6A4shEyWxjYLAt1uuZ5L</code>
+</p>
+<p style="font-size:13px; color:#777; margin-bottom:0">Entirely voluntary and has no bearing on access — the article and all data are open to everyone. Each contribution funds additional time on the next investigation.</p>
+</div>
+</div>
+
+</body>
+</html>
